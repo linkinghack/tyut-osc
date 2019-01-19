@@ -60,6 +60,8 @@ func init() {
 			loadDefaultConfiguration()
 		}
 	}
+	DefaultGpaCrawler.SetConfiguration(defaultConfig)
+	logger.Info("Crawler init done.")
 }
 
 func infoWithTime(msg ...string) {

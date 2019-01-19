@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"go.uber.org/zap"
 	"golang.org/x/net/publicsuffix"
+	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
@@ -22,29 +23,37 @@ func (crawler *GpaCrawler) createClientAndLogin(stuid string, stuPassword string
 		return
 	}
 
-	duration, _ := time.ParseDuration("15s")
 	client = &http.Client{
 		Jar:     jar,
-		Timeout: duration,
+		Timeout: time.Second * 15,
 	}
 
+	fmt.Println("config.BaseLocationGPA: ", crawler.config.BaseLocationGPA)
+
+	// 初始化Cookie
+	res, err := client.Get(crawler.config.BaseLocationGPA[0])
+	fmt.Println("first get status: ", res.Status, " length: ", res.ContentLength)
+
 	// 登录验证
-	url_idx := 0 // 准备尝试的url下标
-	resp, err := client.PostForm(crawler.config.BaseLocationGPA[url_idx]+"/Hander/LoginAjax.ashx",
-		url.Values{"u": {stuid}, "p": {stuPassword}, "r": {"on"}})
+	formValues := url.Values{}
+	formValues.Add("u", stuid)
+	formValues.Add("p", stuPassword)
+	formValues.Add("r", "on")
+	resp, err := client.PostForm(crawler.config.BaseLocationGPA[0]+"/Hander/LoginAjax.ashx",
+		formValues)
+	fmt.Println("login response length: ", resp.ContentLength, " status: ", resp.Status)
 	if err != nil {
 		errorWithTime("GPA 系统请求失败" + " - 正在尝试学生:" + stuid)
 		return
 	}
 	defer resp.Body.Close()
 
-	bodyData := []byte{}
+	bodyData, _ := ioutil.ReadAll(resp.Body)
 	bodyJson := map[string]interface{}{}
-	resp.Body.Read(bodyData)
 	json.Unmarshal(bodyData, &bodyJson)
 	if bodyJson["Code"] != 1.0 {
 		logger.Warn("Cannot Login. "+"gpa系统返回值:"+fmt.Sprintf("%s", bodyJson), zap.String("stuid", stuid), zap.Time("time", time.Now()))
-		err = fmt.Errorf("登陆失败,提示:%s", bodyJson["Msg"])
+		err = fmt.Errorf("登陆失败,提示:%s", fmt.Sprint(bodyData))
 	} else {
 		logger.Info("GPA 系统登陆成功", zap.String("stuid", stuid))
 		err = nil
@@ -66,8 +75,7 @@ func (crawler *GpaCrawler) fetchGpaJson(stuid string, client *http.Client) (stri
 	}
 	defer resp.Body.Close()
 
-	rawJsonBytes := []byte{}
-	_, err = resp.Body.Read(rawJsonBytes)
+	rawJsonBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		logger.Error("无法读取gpa原始信息响应体", zap.String("stuid", stuid), zap.Time("time", time.Now()))
 	}
@@ -75,4 +83,18 @@ func (crawler *GpaCrawler) fetchGpaJson(stuid string, client *http.Client) (stri
 	// 去掉返回值中的数组表达
 	result = strings.Trim(string(rawJsonBytes), "[]")
 	return result, nil
+}
+
+func (crawler *GpaCrawler) GetGpaInfo(stuid string, stuPassword string, targetStuid string) (string, error) {
+	client, err := crawler.createClientAndLogin(stuid, stuPassword)
+	if err != nil {
+		return "", err
+	}
+	jsonText, err := crawler.fetchGpaJson(targetStuid, client)
+
+	if err != nil {
+		return "", err
+	}
+
+	return jsonText, nil
 }
