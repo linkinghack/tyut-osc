@@ -4,6 +4,7 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -37,11 +38,6 @@ func Test_JsonParse(t *testing.T) {
 	fmt.Println(reflect.TypeOf(bodyJson["Code"]))     // float64
 	fmt.Println(int(bodyJson["Code"].(float64)) == 1) //true
 }
-
-/*
-func Test_Logger(t *testing.T) {
-	Logger.Info("works well",zap.Time("time",time.Now()))
-}*/
 
 func TestGpaCrawler_GetGpaInfo(t *testing.T) {
 	text, err := DefaultGpaCrawler.GetGpaInfo("2015005973", "lolipop8974.", "2015005973")
@@ -93,4 +89,12 @@ func Test_HttpClient_Basic(t *testing.T) {
 	data, _ := ioutil.ReadAll(resp.Body)
 	fmt.Println(resp.Header)
 	fmt.Println(string(data))
+}
+
+// google uuid
+func Test_UUID(t *testing.T) {
+	for i := 0; i < 100; i++ {
+		uidd, _ := uuid.NewRandom()
+		fmt.Println(uidd)
+	}
 }

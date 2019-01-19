@@ -6,7 +6,6 @@ import (
 	"go.uber.org/zap/zapcore"
 	"io/ioutil"
 	"log"
-	"strings"
 	"time"
 )
 
@@ -16,12 +15,21 @@ type Configuration struct {
 	BaseLocationGPA []string // The base url of GPA system including "http://"
 }
 
+// GpaCrawler is the object representing the crawl engine
+// Generally, just use the DefaultGpaCrawler is OK. The difference between different
+//GpaCrawlers is just the Configuration.
 type GpaCrawler struct {
 	config *Configuration
 }
 
+func (e *GpaCrawler) SetConfiguration(conf *Configuration) {
+	e.config = conf
+}
+
 var logger *zap.Logger
 var defaultConfig *Configuration
+
+// DefaultGpaCrawler is thread safe. Generally just use this and don't create a new Crawler
 var DefaultGpaCrawler *GpaCrawler
 
 func init() {
@@ -59,31 +67,20 @@ func init() {
 		if err != nil {
 			loadDefaultConfiguration()
 		}
+		// 配置文件错误格式不正确
+		if defaultConfig.BaseLocationGPA == nil || defaultConfig.BaseLocationURP == nil {
+			logger.Error("config.json 中无法读取所需信息。请正确定义BaseLocationURP:[]string 和 BaseLocationGPA:[]string")
+			loadDefaultConfiguration()
+		}
 	}
 	DefaultGpaCrawler.SetConfiguration(defaultConfig)
 	logger.Info("Crawler init done.")
 }
 
-func infoWithTime(msg ...string) {
-	logger.Info(strings.Join(msg, " "), zap.Time("time", time.Now()))
-}
-func errorWithTime(msg ...string) {
-	logger.Error(strings.Join(msg, " "), zap.Time("time", time.Now()))
-}
-func warnWithTime(msg ...string) {
-	logger.Warn(strings.Join(msg, " "), zap.Time("time", time.Now()))
-}
-func debugWithTime(msg ...string) {
-	logger.Debug(strings.Join(msg, " "), zap.Time("time", time.Now()))
-}
-
 func loadDefaultConfiguration() {
+	logger.Info("Loading default configuration of GpaCrawler", zap.Time("time", time.Now()))
 	defaultConfig = &Configuration{
 		BaseLocationURP: []string{"http://202.207.247.49", "http://202.207.247.44:8089", "http://202.207.247.51:8065", "http://202.207.247.49"},
 		BaseLocationGPA: []string{"http://202.207.247.60/"},
 	}
-}
-
-func (e *GpaCrawler) SetConfiguration(conf *Configuration) {
-	e.config = conf
 }
