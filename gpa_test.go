@@ -4,7 +4,7 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
-	"github.com/google/uuid"
+	"github.com/linkinghack/tyut-osc/DataModel"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -15,15 +15,15 @@ import (
 
 func Test_GpaMarshal(t *testing.T) {
 	rawGpaJson := `{"xh":"2015005973","xm":"刘磊","bjh":"软件1516","bm":"软件1516","zyh":"160101","zym":"软件工程","xsh":"16","xsm":"软件学院","njdm":"2015","yqzxf":"188","yxzzsjxf":"8.32","zxf":"159.50","yxzxf":"159.50","cbjgxf":"0","sbjgxf":"0","pjxfjd":"3.80","gpabjpm":"4","gpazypm":"61","pjcj":"85.30","pjcjbjpm":"3","pjcjzypm":"69","jqxfcj":"84.93","jqbjpm":"4","jqzypm":"65","tsjqxfcj":"84.93","tjsj":"2019-01-17 01:00:04","bjrs":"30","zyrs":"968","dlrs":"","gpadlpm":"1148"}`
-	gpa := &GpaInfo{}
-	err := json.Unmarshal([]byte(rawGpaJson), gpa)
+	gpa := DataModel.GpaInfo{}
+	err := json.Unmarshal([]byte(rawGpaJson), &gpa)
 	if err != nil {
 		fmt.Println(err)
 		t.Fail()
 	}
 	//decoder := json.NewDecoder(strings.NewReader(rawGpaJson))
 	fmt.Println(gpa)
-	fmt.Println((*gpa).AvgScore)
+	fmt.Println(gpa.AvgScore)
 }
 
 func Test_JsonParse(t *testing.T) {
@@ -40,7 +40,8 @@ func Test_JsonParse(t *testing.T) {
 }
 
 func TestGpaCrawler_GetGpaInfo(t *testing.T) {
-	text, err := DefaultGpaCrawler.GetGpaInfo("2015005973", "lolipop8974.", "2015005973")
+	gpacrawler := NewGpaCrawler()
+	text, err := gpacrawler.GetGpaInfo("2015005973", "lolipop8974", "2015005973")
 	if err != nil {
 		t.Fail()
 		panic(err)
@@ -53,6 +54,7 @@ func Test_HttpClient(t *testing.T) {
 	formValues.Add("u", "2015005973")
 	formValues.Add("p", "lolipop8974.")
 	formValues.Add("r", "on")
+
 	requestValue := "u=2015005973&p=lolipop8974.&r=on"
 	request, _ := http.NewRequest("POST", "http://202.207.247.60/Hander/LoginAjax.ashx", strings.NewReader(requestValue))
 	//request.Header.Set("User-Agent","Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:64.0) Gecko/20100101 Firefox/64.0")
@@ -75,6 +77,8 @@ func Test_HttpClient(t *testing.T) {
 	//res,_ := http.Get("http://202.207.247.60")
 	//fmt.Println(res)
 
+	// 重要是这里，在首部添加Accept-Encoding 属性为gzip后，response中的body将不再自动进行gzip解码
+	// 需要手动进行
 	gzipdata, _ := gzip.NewReader(resp.Body)
 	data, _ := ioutil.ReadAll(gzipdata)
 
@@ -82,19 +86,4 @@ func Test_HttpClient(t *testing.T) {
 
 	fmt.Println(string(data))
 	ioutil.WriteFile("temp.txt", data, 0644)
-}
-
-func Test_HttpClient_Basic(t *testing.T) {
-	resp, _ := http.Get("http://baidu.com")
-	data, _ := ioutil.ReadAll(resp.Body)
-	fmt.Println(resp.Header)
-	fmt.Println(string(data))
-}
-
-// google uuid
-func Test_UUID(t *testing.T) {
-	for i := 0; i < 100; i++ {
-		uidd, _ := uuid.NewRandom()
-		fmt.Println(uidd)
-	}
 }

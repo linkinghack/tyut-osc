@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
+	"github.com/linkinghack/tyut-osc/DataModel"
 	"go.uber.org/zap"
 	"golang.org/x/net/publicsuffix"
 	"io/ioutil"
@@ -13,6 +14,46 @@ import (
 	"strings"
 	"time"
 )
+
+// GpaCrawler is the object representing the crawl engine
+// Generally, just use the DefaultGpaCrawler is OK. The difference between different
+//GpaCrawlers is just the Configuration.
+type GpaCrawler struct {
+	config *Configuration
+}
+
+func (e *GpaCrawler) SetConfiguration(conf *Configuration) {
+	e.config = conf
+}
+
+// Create an instance of GpaCrawler.
+// @returns The pointer of the GpaCrawler{} just created.
+func NewGpaCrawler() *GpaCrawler {
+	// 初始化gpa教务系统配置
+	defaultConfig := &Configuration{}
+	DefaultGpaCrawler := &GpaCrawler{}
+
+	configFile, err := ioutil.ReadFile("config.json")
+	if err != nil {
+		logger.Warn("无法加载GPACrawler配置文件: config.json")
+		defaultConfig = loadDefaultConfiguration()
+		logger.Info("已使用默认配置创建GPACrawler")
+	} else {
+		err = json.Unmarshal(configFile, defaultConfig)
+		if err != nil {
+			defaultConfig = loadDefaultConfiguration()
+		}
+		// 配置文件错误格式不正确
+		if defaultConfig.BaseLocationGPA == nil || defaultConfig.BaseLocationURP == nil {
+			logger.Error("config.json 中无法读取所需信息。请正确定义BaseLocationURP:[]string 和 BaseLocationGPA:[]string")
+			defaultConfig = loadDefaultConfiguration()
+			logger.Info("使用默认配置创建GPACrawler", zap.Time("time", time.Now()))
+		}
+	}
+	DefaultGpaCrawler.SetConfiguration(defaultConfig)
+	logger.Info("Crawler init done.")
+	return DefaultGpaCrawler
+}
 
 // createClientAndLogin 接受gpa教务系统学号和密码, 返回一个登陆状态ok的http.Client
 func (crawler *GpaCrawler) createClientAndLogin(stuid string, stuPassword string) (client *http.Client, err error) {
@@ -53,7 +94,7 @@ func (crawler *GpaCrawler) createClientAndLogin(stuid string, stuPassword string
 	if err != nil || bodyJson["Code"] != 1.0 {
 		if err == nil {
 			logger.Warn("Cannot Login. "+"gpa系统返回值:"+fmt.Sprintf("%s", bodyJson), zap.String("stuid", stuid), zap.Time("time", time.Now()))
-			err = fmt.Errorf("登陆失败,提示:%s", fmt.Sprint(bodyData))
+			err = fmt.Errorf("登陆失败,提示:%s", fmt.Sprint(bodyJson["Msg"]))
 		} else {
 			uid, _ := uuid.NewUUID()
 			uids := strings.Split(uid.String(), "-")[0]
@@ -97,7 +138,7 @@ func (crawler *GpaCrawler) fetchGpaJson(stuid string, client *http.Client) (stri
 	return result, nil
 }
 
-func (crawler *GpaCrawler) GetGpaInfo(stuid string, stuPassword string, targetStuid string) (*GpaInfo, error) {
+func (crawler *GpaCrawler) GetGpaInfo(stuid string, stuPassword string, targetStuid string) (*DataModel.GpaInfo, error) {
 	uid, _ := uuid.NewUUID()
 	uids := strings.Split(uid.String(), "-")[0]
 
@@ -112,7 +153,7 @@ func (crawler *GpaCrawler) GetGpaInfo(stuid string, stuPassword string, targetSt
 	}
 
 	// 解析Json
-	gpainfo := GpaInfo{}
+	gpainfo := DataModel.GpaInfo{}
 	err = json.Unmarshal([]byte(jsonText), &gpainfo)
 	if err != nil {
 		logger.Error("无法解析GPA JSON", zap.Time("time", time.Now()), zap.String("detail", err.Error()))
