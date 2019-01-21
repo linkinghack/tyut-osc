@@ -3,10 +3,12 @@
   "encoding": "json",
   "outputPaths": ["stdout"],
   "errorOutputPaths": ["stderr"],
-
+  "disableCaller": false,
   "encoderConfig": {
     "messageKey": "message",
     "levelKey": "level",
-    "levelEncoder": "lowercase"
+    "levelEncoder": "lowercase",
+    "callerKey": "caller",
+    "callerEncoder": "short"
   }
 }

@@ -22,3 +22,7 @@ func Test_UUID(t *testing.T) {
 		fmt.Println(uidd)
 	}
 }
+
+func Test_Logger(t *testing.T) {
+	logger.Info("is caller ok?")
+}

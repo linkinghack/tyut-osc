@@ -38,6 +38,7 @@ func init() {
 	if err != nil {
 		log.Fatal("zap.Logger build failed.")
 	}
+	logger.WithOptions(zap.AddCaller())
 	defer logger.Sync()
 	logger.Info("Zap.Logger build success")
 

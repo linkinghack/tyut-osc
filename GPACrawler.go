@@ -29,6 +29,7 @@ func (e *GpaCrawler) SetConfiguration(conf *Configuration) {
 // Create an instance of GpaCrawler.
 // @returns The pointer of the GpaCrawler{} just created.
 func NewGpaCrawler() *GpaCrawler {
+	defer logger.Sync()
 	// 初始化gpa教务系统配置
 	defaultConfig := &Configuration{}
 	DefaultGpaCrawler := &GpaCrawler{}
@@ -57,6 +58,10 @@ func NewGpaCrawler() *GpaCrawler {
 
 // createClientAndLogin 接受gpa教务系统学号和密码, 返回一个登陆状态ok的http.Client
 func (crawler *GpaCrawler) createClientAndLogin(stuid string, stuPassword string) (client *http.Client, err error) {
+	uid, _ := uuid.NewUUID()
+	uids := strings.Split(uid.String(), "-")[0]
+	defer logger.Sync()
+
 	// 准备HttpClient
 	jar, _ := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
 	client = &http.Client{
@@ -67,10 +72,9 @@ func (crawler *GpaCrawler) createClientAndLogin(stuid string, stuPassword string
 	// 初始化Cookie
 	_, er := client.Get(crawler.config.BaseLocationGPA[0])
 	if er != nil {
-		uid, _ := uuid.NewUUID()
-		uids := strings.Split(uid.String(), "-")[0]
-		logger.Error("无法连接GPA系统主机", zap.String("detail", er.Error()), zap.String("errid", uids))
-		err = fmt.Errorf("无法连接GPA教务系统,错误id: %s", uids)
+		logger.Error("无法连接GPA系统主机 可能超时错误", zap.String("errid", uids), zap.String("stuid", stuid), zap.Time("time", time.Now()), zap.String("detail", er.Error()))
+		err = fmt.Errorf("连接到GPA教务系统超时,错误id: %s", uids)
+		client = nil
 		return
 	}
 
@@ -81,12 +85,14 @@ func (crawler *GpaCrawler) createClientAndLogin(stuid string, stuPassword string
 	formValues.Add("r", "on")
 	resp, er := client.PostForm(crawler.config.BaseLocationGPA[0]+"/Hander/LoginAjax.ashx",
 		formValues)
-	if er != nil {
-
+	if er != nil { // 一般不会发生，超时错误已在初始化cookie 阶段处理
+		logger.Info("GPA教务系统登录失败", zap.String("stuid", stuid), zap.String("errid", uids), zap.Time("time", time.Now()))
+		fmt.Errorf("GPA教务系统登录失败,错误id: %s", uids)
 		return
 	}
 	defer resp.Body.Close()
 
+	// 分析登录结果
 	bodyData, _ := ioutil.ReadAll(resp.Body)
 	bodyJson := map[string]interface{}{}
 	err = json.Unmarshal(bodyData, &bodyJson)
@@ -96,14 +102,12 @@ func (crawler *GpaCrawler) createClientAndLogin(stuid string, stuPassword string
 			logger.Warn("Cannot Login. "+"gpa系统返回值:"+fmt.Sprintf("%s", bodyJson), zap.String("stuid", stuid), zap.Time("time", time.Now()))
 			err = fmt.Errorf("登陆失败,提示:%s", fmt.Sprint(bodyJson["Msg"]))
 		} else {
-			uid, _ := uuid.NewUUID()
-			uids := strings.Split(uid.String(), "-")[0]
 			err = fmt.Errorf("未知异常. 错误id:%s", uids)
 			return
 		}
 
 	} else {
-		logger.Info("GPA 系统登陆成功", zap.String("stuid", stuid))
+		logger.Info("GPA 系统登陆成功", zap.String("stuid", stuid), zap.Time("time", time.Now()))
 		err = nil
 	}
 	return
@@ -111,6 +115,7 @@ func (crawler *GpaCrawler) createClientAndLogin(stuid string, stuPassword string
 
 //FetchGpaJson 接受一个已经准备好并通过登录认证的http.Client指针, 返回gpa教务系统的原生json(已处理掉数组表达)
 func (crawler *GpaCrawler) fetchGpaJson(stuid string, client *http.Client) (string, error) {
+	defer logger.Sync()
 	result := ""
 
 	uid, _ := uuid.NewUUID()
@@ -141,6 +146,7 @@ func (crawler *GpaCrawler) fetchGpaJson(stuid string, client *http.Client) (stri
 func (crawler *GpaCrawler) GetGpaInfo(stuid string, stuPassword string, targetStuid string) (*DataModel.GpaInfo, error) {
 	uid, _ := uuid.NewUUID()
 	uids := strings.Split(uid.String(), "-")[0]
+	defer logger.Sync()
 
 	client, err := crawler.createClientAndLogin(stuid, stuPassword)
 	if err != nil {

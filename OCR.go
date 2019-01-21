@@ -59,3 +59,5 @@ func NewOcrEnginePool(size int32, initialActive int32) *OcrEnginePool {
 
 	return &ocrpool
 }
+
+// 提供一些图像二值化处理的方法
