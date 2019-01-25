@@ -61,3 +61,6 @@ func NewOcrEnginePool(size int32, initialActive int32) *OcrEnginePool {
 }
 
 // 提供一些图像二值化处理的方法
+/*func BinPic(rawReader io.Reader) []byte {
+	image.Decode(rawReader)
+}*/
