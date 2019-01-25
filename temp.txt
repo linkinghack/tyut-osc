@@ -1,0 +1,32 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><title>
+	500
+</title>
+    <style type="text/css">
+        .imgdiv
+        {
+            border: 1px solid #ccc;
+            height: 500px;
+            width: 500px;
+            text-align: center;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <form name="form1" method="post" action="./E500.aspx" id="form1">
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="/wEPDwUJNzgzNDMwNTMzZGQwfbeXMOfTwMVAlnseWTUm1O3JoBgo+25/hUtMHKh4Iw==" />
+
+<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="7B28C475" />
+    <div class="imgdiv">
+        <img src="/Images/Error/505.png" alt="500" />
+    </div>
+    <div style="text-align: center; margin: 0 auto;">
+        <a href="/LoginN.aspx">
+            <img src="/Images/Error/home.png" alt="回主页" /></a></div>
+    </form>
+</body>
+</html>

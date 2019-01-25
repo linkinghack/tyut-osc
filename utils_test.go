@@ -75,3 +75,14 @@ func Test_PicHandle(t *testing.T) {
 func TestFloatCount(t *testing.T) {
 	fmt.Println(23 / 45.0)
 }
+
+func Test_ByteTransfer(t *testing.T) {
+	arr := make([]byte,10)
+	arr[1] =12
+	fn := func(ar []byte) {
+		ar[2] = 23
+	}
+	fn(arr)
+	fmt.Println(arr)
+
+}

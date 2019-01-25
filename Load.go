@@ -17,6 +17,7 @@ type Configuration struct {
 }
 
 var logger *zap.Logger
+var OcrPool *OcrEnginePool
 
 //var defaultConfig *Configuration
 
@@ -42,6 +43,16 @@ func init() {
 	logger.WithOptions(zap.AddCaller())
 	defer logger.Sync()
 	logger.Info("Zap.Logger build success")
+
+}
+
+// 初始化Ocr pool
+func init() {
+	OcrPool = NewOcrEnginePool(20,5)
+	engine := OcrPool.Get()
+	defer OcrPool.Put(engine)
+
+
 
 }
 

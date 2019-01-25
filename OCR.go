@@ -1,9 +1,15 @@
 package tyut_osc
 
 import (
+	"bytes"
 	"github.com/otiai10/gosseract"
 	"go.uber.org/atomic"
+	"image"
+	"image/color"
+	"image/jpeg"
+	"strings"
 	"sync"
+	"unicode"
 )
 
 type OcrEnginePool struct {
@@ -23,14 +29,13 @@ func (p *OcrEnginePool) Get() *gosseract.Client {
 }
 
 func (p *OcrEnginePool) Put(c *gosseract.Client) {
-	go func() {
-		if p.active.Load() > p.size.Load() {
-			c.Close()
-			c = nil //GC
-		} else {
-			p.p.Put(c)
-		}
-	}()
+	if p.active.Load() > p.size.Load() {
+		c.Close()
+		c = nil //GC
+	} else {
+		p.active.Add(-1)
+		p.p.Put(c)
+	}
 }
 
 func NewOcrEnginePool(size int32, initialActive int32) *OcrEnginePool {
@@ -40,7 +45,10 @@ func NewOcrEnginePool(size int32, initialActive int32) *OcrEnginePool {
 
 	sp := sync.Pool{
 		New: func() interface{} {
-			return gosseract.NewClient()
+			client := gosseract.NewClient()
+			client.Languages = []string{"rnd"}
+			client.Trim = true
+			return client
 		},
 	}
 
@@ -61,6 +69,51 @@ func NewOcrEnginePool(size int32, initialActive int32) *OcrEnginePool {
 }
 
 // 提供一些图像二值化处理的方法
-/*func BinPic(rawReader io.Reader) []byte {
-	image.Decode(rawReader)
-}*/
+
+// BinPic 将一个RGB图片转为黑白图片,
+// 为tesseract识别图片优化.
+// rawPic 应该为一个指针
+func BinPic(rawPic image.Image) *(image.Gray) {
+	bound := rawPic.Bounds()
+	newgraypic := image.NewGray(bound)
+	for i := 0; i < bound.Dx(); i++ {
+		for j := 0; j < bound.Dy(); j++ {
+			r, g, b, _ := rawPic.At(i, j).RGBA()
+
+			var pointColor color.Color // 新颜色
+			if r+g+b > 98888 { // 优化的阈值
+				pointColor = color.White
+			} else {
+				pointColor = color.Black
+			}
+
+			newgraypic.Set(i, j, color.RGBAModel.Convert(pointColor))
+		}
+	}
+	return newgraypic
+}
+
+// img因该为一个指针
+func Image2ByteArray(img image.Image) []byte {
+	buf := new(bytes.Buffer)
+	jpeg.Encode(buf,img,nil)
+	return buf.Bytes()
+}
+
+func CaptchaTextFilt(rawtext string) string  {
+	chars := []rune(rawtext)
+	count := 0
+	var result strings.Builder
+	for _,v := range chars {
+
+		if unicode.IsDigit(v) || unicode.IsLetter(v) {
+			result.WriteRune(v)
+		}
+		count++
+		if count >= 4 {
+			break
+		}
+	}
+
+	return result.String()
+}
