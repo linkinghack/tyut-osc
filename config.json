@@ -1,5 +1,5 @@
 {
-  "BaseLocationURP" : ["http://202.207.247.44:8089","http://202.207.247.49","http://202.207.247.51:8065"],
+  "BaseLocationURP" : ["http://202.207.247.51:8065","http://202.207.247.44:8089","http://202.207.247.49"],
   "BaseLocationGPA" : ["http://202.207.247.60"],
   "TempDir": "/tyuter/tmp"
 }

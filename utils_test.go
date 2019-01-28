@@ -72,13 +72,17 @@ func Test_PicHandle(t *testing.T) {
 
 }
 
+func Test_CaptchaGenerate(t *testing.T) {
+	GenerateCaptchaGrainingSet()
+}
+
 func TestFloatCount(t *testing.T) {
 	fmt.Println(23 / 45.0)
 }
 
 func Test_ByteTransfer(t *testing.T) {
-	arr := make([]byte,10)
-	arr[1] =12
+	arr := make([]byte, 10)
+	arr[1] = 12
 	fn := func(ar []byte) {
 		ar[2] = 23
 	}

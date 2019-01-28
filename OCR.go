@@ -47,7 +47,6 @@ func NewOcrEnginePool(size int32, initialActive int32) *OcrEnginePool {
 		New: func() interface{} {
 			client := gosseract.NewClient()
 			client.Languages = []string{"rnd"}
-			client.Trim = true
 			return client
 		},
 	}
@@ -81,7 +80,7 @@ func BinPic(rawPic image.Image) *(image.Gray) {
 			r, g, b, _ := rawPic.At(i, j).RGBA()
 
 			var pointColor color.Color // 新颜色
-			if r+g+b > 98888 { // 优化的阈值
+			if r+g+b > 98888 {         // 优化的阈值
 				pointColor = color.White
 			} else {
 				pointColor = color.Black
@@ -96,15 +95,15 @@ func BinPic(rawPic image.Image) *(image.Gray) {
 // img因该为一个指针
 func Image2ByteArray(img image.Image) []byte {
 	buf := new(bytes.Buffer)
-	jpeg.Encode(buf,img,nil)
+	jpeg.Encode(buf, img, nil)
 	return buf.Bytes()
 }
 
-func CaptchaTextFilt(rawtext string) string  {
+func CaptchaTextFilt(rawtext string) string {
 	chars := []rune(rawtext)
 	count := 0
 	var result strings.Builder
-	for _,v := range chars {
+	for _, v := range chars {
 
 		if unicode.IsDigit(v) || unicode.IsLetter(v) {
 			result.WriteRune(v)
