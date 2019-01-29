@@ -80,7 +80,7 @@ func BinPic(rawPic image.Image) *(image.Gray) {
 			r, g, b, _ := rawPic.At(i, j).RGBA()
 
 			var pointColor color.Color // 新颜色
-			if r+g+b > 98888 {         // 优化的阈值
+			if r+g+b > 99999 {         // 优化的阈值
 				pointColor = color.White
 			} else {
 				pointColor = color.Black
@@ -92,7 +92,7 @@ func BinPic(rawPic image.Image) *(image.Gray) {
 	return newgraypic
 }
 
-// img因该为一个指针
+// img应该为一个指针
 func Image2ByteArray(img image.Image) []byte {
 	buf := new(bytes.Buffer)
 	jpeg.Encode(buf, img, nil)

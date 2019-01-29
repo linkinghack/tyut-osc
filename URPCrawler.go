@@ -5,16 +5,17 @@ import (
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/google/uuid"
+	"github.com/linkinghack/tyut-osc/DataModel"
 	"go.uber.org/zap"
 	"golang.org/x/net/publicsuffix"
 	"image"
 	_ "image/jpeg"
 	"io/ioutil"
-	"math/rand"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
-	"os"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -35,12 +36,13 @@ func NewUrpCrawler() *UrpCrawler {
 	return &uc
 }
 
-func (urp *UrpCrawler) createClientAndLogin(stuid string, stuPassword string) (client *http.Client, activateUrlIdx int, err error) {
+func (urp *UrpCrawler) CreateClientAndLogin(stuid string, stuPassword string) (client *http.Client, activateUrlIdx int, err error) {
 	uid, _ := uuid.NewUUID()
 	uids := strings.Split(uid.String(), "-")[0]
 	err = fmt.Errorf("登录过程异常,错误id: %s", uids)
 
 	// 准备http.Client
+
 	jar, _ := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
 	client = &http.Client{
 		Jar:     jar,
@@ -48,6 +50,7 @@ func (urp *UrpCrawler) createClientAndLogin(stuid string, stuPassword string) (c
 	}
 
 	// 1. 探测可用的url并初始化cookie
+	// TODO: 使用redis存储可用URL,避免每次都探测
 	foundActive := false
 
 	for i, v := range urp.config.BaseLocationURP {
@@ -69,7 +72,7 @@ func (urp *UrpCrawler) createClientAndLogin(stuid string, stuPassword string) (c
 	}
 
 	ok := false
-	for i := 0; !ok && i < 5; i++ {
+	for i := 0; !ok && i < urp.config.UrpLoginAttempt; i++ {
 		message := fmt.Sprintf("尝试第%d次登录", (i + 1))
 		logger.Info(message, zap.String("stuid", stuid), zap.Time("time", time.Now()))
 
@@ -149,7 +152,6 @@ func (urp *UrpCrawler) login(stuid string, stuPassword string, captcha string, c
 	} else {
 		return false, nil
 	}
-
 }
 
 func (urp *UrpCrawler) getCaptcha(stuid string, stuPassword string, client *http.Client, activateUrlIdx int) (captcha string, err error) {
@@ -162,11 +164,9 @@ func (urp *UrpCrawler) getCaptcha(stuid string, stuPassword string, client *http
 	defer OcrPool.Put(ocr)
 
 	for len(captcha) != 4 {
-		//for len(captcha) != 4 && repeatCount < 5{  //尝试五次验证码
 		// 2. 请求验证码
-		getCaptcha, _ := http.NewRequest("GET", urp.config.BaseLocationURP[activateUrlIdx]+"/validateCodeAction.do?random=0.7616917022636875", nil)
-		getCaptcha.Header.Set("random", string(rand.Int63()))
-		//getCaptcha.Header.Set("Accept-Encoding", "gzip, deflate")
+		getCaptcha, _ := http.NewRequest("GET", urp.config.BaseLocationURP[activateUrlIdx]+"/validateCodeAction.do", nil)
+
 		captchaResp, er := client.Do(getCaptcha)
 		if er != nil {
 			logger.Warn("获取URP系统验证码出错", zap.String("stuid", stuid), zap.String("errid", uids), zap.Time("time", time.Now()), zap.String("detail", er.Error()))
@@ -174,22 +174,8 @@ func (urp *UrpCrawler) getCaptcha(stuid string, stuPassword string, client *http
 		}
 		defer captchaResp.Body.Close()
 
-		captchaPic, er := ioutil.ReadAll(captchaResp.Body)
-		if er != nil {
-			logger.Error("读取验证码错误", zap.String("stuid", stuid), zap.String("errid", uids), zap.Time("time", time.Now()), zap.String("detail", er.Error()))
-			return
-		}
-
-		// captcha pic temp file
-		tmpfile, er := ioutil.TempFile(urp.config.TempDir, "*captcha.jpeg")
-		tmpfile.Write(captchaPic)
-		tmpfile.Close()
-		//defer os.Remove(tmpfile.Name())
-
 		// 3. 图片二值化处理
-		capfile, _ := os.Open(tmpfile.Name())
-		defer capfile.Close()
-		img, _, er := image.Decode(capfile)
+		img, _, er := image.Decode(captchaResp.Body)
 		if er != nil {
 			logger.Warn("captcha二值化:图片读取失败", zap.String("errid", uids), zap.Time("time", time.Now()), zap.String("detail", er.Error()))
 			return
@@ -202,16 +188,122 @@ func (urp *UrpCrawler) getCaptcha(stuid string, stuPassword string, client *http
 			logger.Warn("OCR engine 识别出错", zap.String("errid", uids), zap.Time("time", time.Now()), zap.String("detail", er.Error()))
 			return
 		}
-
 		captcha, er = ocr.Text()
 		if er != nil {
 			logger.Warn("OCR engine 识别出错", zap.String("errid", uids), zap.Time("time", time.Now()), zap.String("detail", er.Error()))
 			return
 		}
 		captcha = CaptchaTextFilt(captcha)
+	}
+	return captcha, nil
+}
 
-		fmt.Println("captcha: ", captcha, "len: ", len(captcha), " file: ", capfile.Name())
+// GetPassedCourses 返回所有已出成绩学期列表,包含每学期成绩
+func (urp *UrpCrawler) GetPassedCourses(client *http.Client, activateUrlIdx int) (terms []DataModel.Term, err error) {
+	uid, _ := uuid.NewUUID()
+	uids := strings.Split(uid.String(), "-")[0]
+	err = fmt.Errorf("无法获取已通过成绩,错误id: %s", uids)
+
+	resp, er := client.Get(urp.config.BaseLocationURP[activateUrlIdx] + "/gradeLnAllAction.do?type=ln&oper=qbinfo&lnxndm=")
+	if er != nil {
+		logger.Warn("无法请求成绩页面", zap.String("errid", uids), zap.Time("time", time.Now()), zap.String("detail", er.Error()))
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	passedCoursesHtmlBytes, _ := ioutil.ReadAll(resp.Body)
+	passedCoursesHtmlBytes, er = DecodeGBK(passedCoursesHtmlBytes)
+	if er != nil {
+		logger.Warn("GBK编码转换错误", zap.String("errid", uids), zap.Time("time", time.Now()), zap.String("detail", err.Error()))
+		return nil, err
 	}
 
-	return captcha, nil
+	//ioutil.WriteFile("grade.html",passedCoursesHtmlBytes,0644)
+
+	// 分析html结构
+	doc, er := goquery.NewDocumentFromReader(bytes.NewReader(passedCoursesHtmlBytes))
+	if er != nil {
+		logger.Warn("goquery无法解析成绩页面", zap.String("errid", uids), zap.Time("time", time.Now()), zap.String("detail", err.Error()))
+		return nil, err
+	}
+
+	// 1. 学期列表
+	doc.Find("a").Each(func(i int, selection *goquery.Selection) {
+		term := DataModel.Term{}
+		termname, _ := selection.Attr("name") //2015-2016学年秋(两学期)
+		term.TermDescription = termname
+
+		temprunes := []rune(termname)
+		if temprunes[11] == '秋' {
+			term.TermOrder = 1
+			term.TermYear, _ = strconv.Atoi(string(temprunes[0:4]))
+		} else if temprunes[11] == '春' {
+			term.TermOrder = 0
+			term.TermYear, _ = strconv.Atoi(string(temprunes[5:9]))
+		}
+
+		terms = append(terms, term)
+	})
+
+	// 2. 课程成绩列表
+	// 每个.titleTop2 对应一个学期
+	doc.Find(".titleTop2").Each(func(i int, termhtml *goquery.Selection) {
+		passedcourses := []DataModel.PassedCourse{}
+
+		// 每条课程成绩信息存在一个.odd中
+		termhtml.Find(".odd").Each(func(i int, coursehtml *goquery.Selection) {
+			course := DataModel.PassedCourse{}
+
+			coursehtml.Find("td").Each(func(i int, field *goquery.Selection) {
+				if i == 0 {
+					course.Id = strings.TrimSpace(field.Text())
+				}
+				if i == 1 {
+					course.CourseSequenceNumber, _ = strconv.Atoi(strings.TrimSpace(field.Text()))
+				}
+				if i == 2 {
+					course.CourseName = strings.TrimSpace(field.Text())
+				}
+				if i == 3 {
+					course.EnglishCourseName = strings.TrimSpace(field.Text())
+				}
+				if i == 4 {
+					course.CourseCredit, _ = strconv.ParseFloat(strings.TrimSpace(field.Text()), 64)
+				}
+				if i == 5 {
+					course.SelectionProperty = strings.TrimSpace(field.Text())
+				}
+				if i == 6 {
+					// 分中文成绩和数字成绩两种解决
+					scoreStr := strings.TrimSpace(field.Text())
+					reg, _ := regexp.Compile(`[[^(0-9)+.(0-9)+]]`)
+					scoreFiltered := reg.ReplaceAllString(scoreStr, "")
+					if len(scoreFiltered) > 0 {
+						course.Score, _ = strconv.ParseFloat(scoreStr, 64)
+					} else {
+						course.ChScore = scoreStr
+						course.Score = -1 //标记使用中文成绩
+					}
+
+				}
+
+			})
+
+			passedcourses = append(passedcourses, course)
+		})
+
+		terms[i].PassedCourses = passedcourses
+	})
+
+	fmt.Println(terms)
+
+	return
+}
+
+/**
+GetFailedCourses 返回挂科成绩列表,包含曾挂科和现挂科
+*/
+func GetFailedCourses() (fcourses []DataModel.FailedCourse, err error) {
+
+	return nil, nil
 }

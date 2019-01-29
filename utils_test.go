@@ -73,7 +73,7 @@ func Test_PicHandle(t *testing.T) {
 }
 
 func Test_CaptchaGenerate(t *testing.T) {
-	GenerateCaptchaGrainingSet()
+	GenerateCaptchaGrainingSet(30)
 }
 
 func TestFloatCount(t *testing.T) {

@@ -13,15 +13,23 @@ func Test_Channel(t *testing.T) {
 }
 
 func Test_UrpLogin(t *testing.T) {
-	start := time.Now()
 
-	urpcrawler := NewUrpCrawler()
-	_, idx, err := urpcrawler.createClientAndLogin("2015005973", "lolipop8974.")
-	if err != nil {
-		fmt.Println(err)
+	for i := 0; i < 80; i++ {
+		start := time.Now()
+		urpcrawler := NewUrpCrawler()
+		_, idx, err := urpcrawler.CreateClientAndLogin("2015005973", "lolipop8974.")
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Println("avaliable idx: ", idx)
+
+		end := time.Now()
+		fmt.Println("耗时:", end.UnixNano()-start.UnixNano())
 	}
-	fmt.Println("avaliable idx: ", idx)
+}
 
-	end := time.Now()
-	fmt.Println("耗时:",end.UnixNano() - start.UnixNano() )
+func Test_GradePath(t *testing.T) {
+	urp := NewUrpCrawler()
+	client, idx, _ := urp.CreateClientAndLogin("2015005973", "lolipop8974.")
+	urp.GetPassedCourses(client, idx)
 }

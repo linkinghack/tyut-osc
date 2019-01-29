@@ -14,6 +14,7 @@ type Configuration struct {
 	BaseLocationURP []string // The base url of main urp system including "http://"
 	BaseLocationGPA []string // The base url of GPA system including "http://"
 	TempDir         string
+	UrpLoginAttempt int
 }
 
 var logger *zap.Logger
@@ -48,11 +49,9 @@ func init() {
 
 // 初始化Ocr pool
 func init() {
-	OcrPool = NewOcrEnginePool(20,5)
+	OcrPool = NewOcrEnginePool(20, 5)
 	engine := OcrPool.Get()
 	defer OcrPool.Put(engine)
-
-
 
 }
 

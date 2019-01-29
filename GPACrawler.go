@@ -143,7 +143,7 @@ func (crawler *GpaCrawler) fetchGpaJson(stuid string, client *http.Client) (stri
 	return result, nil
 }
 
-func (crawler *GpaCrawler) GetGpaInfo(stuid string, stuPassword string, targetStuid string) (*DataModel.GpaInfo, error) {
+func (crawler *GpaCrawler) GetGpaRank(stuid string, stuPassword string, targetStuid string) (*DataModel.GpaRank, error) {
 	uid, _ := uuid.NewUUID()
 	uids := strings.Split(uid.String(), "-")[0]
 	defer logger.Sync()
@@ -163,7 +163,8 @@ func (crawler *GpaCrawler) GetGpaInfo(stuid string, stuPassword string, targetSt
 	err = json.Unmarshal([]byte(jsonText), &gpainfo)
 	if err != nil {
 		logger.Error("无法解析GPA JSON", zap.Time("time", time.Now()), zap.String("detail", err.Error()))
-		return nil, fmt.Errorf("未知错误. 错误id:%s", uids)
+		return nil, fmt.Errorf("未知错误,错误id:%s", uids)
 	}
-	return &gpainfo, nil
+	gparank := DataModel.GpaRank(gpainfo)
+	return &gparank, nil
 }
