@@ -28,8 +28,20 @@ func Test_UrpLogin(t *testing.T) {
 	}
 }
 
-func Test_GradePath(t *testing.T) {
+func Test_PassedCourses(t *testing.T) {
 	urp := NewUrpCrawler()
 	client, idx, _ := urp.CreateClientAndLogin("2015005973", "lolipop8974.")
 	urp.GetPassedCourses(client, idx)
+}
+
+func Test_FailedCourses(t *testing.T) {
+	urp := NewUrpCrawler()
+	client, idx, _ := urp.CreateClientAndLogin("2015005968", "304515")
+	fcourse, err := urp.GetFailedCourses(client, idx)
+	if err != nil {
+		fmt.Println(err.Error())
+		t.Fail()
+	} else {
+		fmt.Println(fcourse)
+	}
 }

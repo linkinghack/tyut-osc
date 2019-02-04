@@ -72,8 +72,8 @@ func (urp *UrpCrawler) CreateClientAndLogin(stuid string, stuPassword string) (c
 	}
 
 	ok := false
-	for i := 0; !ok && i < urp.config.UrpLoginAttempt; i++ {
-		message := fmt.Sprintf("尝试第%d次登录", (i + 1))
+	for attempt := 0; !ok && attempt < urp.config.UrpLoginAttempt; attempt++ {
+		message := fmt.Sprintf("尝试第%d次登录", (attempt + 1))
 		logger.Info(message, zap.String("stuid", stuid), zap.Time("time", time.Now()))
 
 		// 2. 获取验证码
@@ -135,7 +135,6 @@ func (urp *UrpCrawler) login(stuid string, stuPassword string, captcha string, c
 		logger.Warn("gbk编码转换错误", zap.String("errid", uids), zap.String("stuid", stuid), zap.Time("time", time.Now()), zap.String("detail", er.Error()))
 		return
 	}
-	ioutil.WriteFile("loginpage.html", loginPageBytes, 0644)
 
 	// 分析登录结果
 	doc, er := goquery.NewDocumentFromReader(bytes.NewReader(loginPageBytes))
@@ -150,6 +149,8 @@ func (urp *UrpCrawler) login(stuid string, stuPassword string, captcha string, c
 		logger.Info("URP登录成功", zap.String("stuid", stuid), zap.Time("time", time.Now()))
 		return true, nil
 	} else {
+		//ioutil.WriteFile(uids+"loginpage.html", loginPageBytes, 0644)
+		logger.Info("登录失败", zap.String("stuid", stuid), zap.Time("time", time.Now()), zap.String("detail", uids+"loginpage.html"))
 		return false, nil
 	}
 }
@@ -206,7 +207,7 @@ func (urp *UrpCrawler) GetPassedCourses(client *http.Client, activateUrlIdx int)
 
 	resp, er := client.Get(urp.config.BaseLocationURP[activateUrlIdx] + "/gradeLnAllAction.do?type=ln&oper=qbinfo&lnxndm=")
 	if er != nil {
-		logger.Warn("无法请求成绩页面", zap.String("errid", uids), zap.Time("time", time.Now()), zap.String("detail", er.Error()))
+		logger.Warn("无法请求学期成绩页面", zap.String("errid", uids), zap.Time("time", time.Now()), zap.String("detail", er.Error()))
 		return nil, err
 	}
 	defer resp.Body.Close()
@@ -254,39 +255,47 @@ func (urp *UrpCrawler) GetPassedCourses(client *http.Client, activateUrlIdx int)
 		termhtml.Find(".odd").Each(func(i int, coursehtml *goquery.Selection) {
 			course := DataModel.PassedCourse{}
 
-			coursehtml.Find("td").Each(func(i int, field *goquery.Selection) {
-				if i == 0 {
-					course.Id = strings.TrimSpace(field.Text())
-				}
-				if i == 1 {
-					course.CourseSequenceNumber, _ = strconv.Atoi(strings.TrimSpace(field.Text()))
-				}
-				if i == 2 {
-					course.CourseName = strings.TrimSpace(field.Text())
-				}
-				if i == 3 {
-					course.EnglishCourseName = strings.TrimSpace(field.Text())
-				}
-				if i == 4 {
-					course.CourseCredit, _ = strconv.ParseFloat(strings.TrimSpace(field.Text()), 64)
-				}
-				if i == 5 {
-					course.SelectionProperty = strings.TrimSpace(field.Text())
-				}
-				if i == 6 {
-					// 分中文成绩和数字成绩两种解决
-					scoreStr := strings.TrimSpace(field.Text())
-					reg, _ := regexp.Compile(`[[^(0-9)+.(0-9)+]]`)
-					scoreFiltered := reg.ReplaceAllString(scoreStr, "")
-					if len(scoreFiltered) > 0 {
-						course.Score, _ = strconv.ParseFloat(scoreStr, 64)
-					} else {
-						course.ChScore = scoreStr
-						course.Score = -1 //标记使用中文成绩
+			coursehtml.Find("td").Each(func(tdidx int, field *goquery.Selection) {
+
+				switch tdidx {
+				case 0:
+					{
+						course.Id = strings.TrimSpace(field.Text())
 					}
-
+				case 1:
+					{
+						course.CourseSequenceNumber, _ = strconv.Atoi(strings.TrimSpace(field.Text()))
+					}
+				case 2:
+					{
+						course.CourseName = strings.TrimSpace(field.Text())
+					}
+				case 3:
+					{
+						course.EnglishCourseName = strings.TrimSpace(field.Text())
+					}
+				case 4:
+					{
+						course.CourseCredit, _ = strconv.ParseFloat(strings.TrimSpace(field.Text()), 64)
+					}
+				case 5:
+					{
+						course.SelectionProperty = strings.TrimSpace(field.Text())
+					}
+				case 6:
+					{
+						// 分中文成绩和数字成绩两种解决
+						scoreStr := strings.TrimSpace(field.Text())
+						reg, _ := regexp.Compile(`[[^(0-9)+.(0-9)+]]`)
+						scoreFiltered := reg.ReplaceAllString(scoreStr, "")
+						if len(scoreFiltered) > 0 {
+							course.Score, _ = strconv.ParseFloat(scoreStr, 64)
+						} else {
+							course.ChScore = scoreStr
+							course.Score = -1 //标记使用中文成绩
+						}
+					}
 				}
-
 			})
 
 			passedcourses = append(passedcourses, course)
@@ -303,7 +312,79 @@ func (urp *UrpCrawler) GetPassedCourses(client *http.Client, activateUrlIdx int)
 /**
 GetFailedCourses 返回挂科成绩列表,包含曾挂科和现挂科
 */
-func GetFailedCourses() (fcourses []DataModel.FailedCourse, err error) {
+func (urp *UrpCrawler) GetFailedCourses(client *http.Client, activateUrlIdx int) (fcourses []DataModel.FailedCourse, err error) {
+	uid, _ := uuid.NewUUID()
+	uids := strings.Split(uid.String(), "-")[0]
+	err = fmt.Errorf("无法获取不及格科目,错误id: %s", uids)
 
-	return nil, nil
+	resp, er := client.Get(urp.config.BaseLocationURP[activateUrlIdx] + "/gradeLnAllAction.do?type=ln&oper=bjg")
+	if er != nil {
+		logger.Warn("无法请求不及格成绩页面", zap.String("errid", uids), zap.Time("time", time.Now()), zap.String("detail", er.Error()))
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	failedCourseHtmlBytes, er := ioutil.ReadAll(resp.Body)
+	if er != nil {
+		logger.Warn("不及格成绩页面响应读取错误", zap.String("errid", uids), zap.Time("time", time.Now()), zap.String("detail", er.Error()))
+		return nil, err
+	}
+	failedCourseHtmlBytes, er = DecodeGBK(failedCourseHtmlBytes)
+	if er != nil {
+		logger.Warn("GBK解码错误", zap.String("errid", uids), zap.Time("time", time.Now()), zap.String("detail", er.Error()))
+		return nil, err
+	}
+
+	//ioutil.WriteFile("failedCourses.html",failedCourseHtmlBytes,0644)
+
+	// goquery解析页面
+	doc, er := goquery.NewDocumentFromReader(bytes.NewReader(failedCourseHtmlBytes))
+	if er != nil {
+		logger.Warn("不及格页面goquery解析错误", zap.String("errid", uids), zap.Time("time", time.Now()), zap.String("detail", er.Error()))
+		return nil, err
+	}
+
+	// 分析页面
+	doc.Find(".displayTag").Each(func(dispIdx int, dispTag *goquery.Selection) {
+		dispTag.Find(".odd").Each(func(i int, fc *goquery.Selection) {
+			failed := DataModel.FailedCourse{}
+			fc.Find("td").Each(func(i int, failedCourseProperty *goquery.Selection) {
+				switch i {
+				case 0:
+					failed.CourseId = strings.TrimSpace(failedCourseProperty.Text())
+				case 1:
+					failed.CourseSequenceNumber = strings.TrimSpace(failedCourseProperty.Text())
+				case 2:
+					failed.CourseName = strings.TrimSpace(failedCourseProperty.Text())
+				case 3:
+					failed.EnglishCourseName = strings.TrimSpace(failedCourseProperty.Text())
+				case 4:
+					{
+						failed.CourseCredit, _ = strconv.ParseFloat(strings.TrimSpace(failedCourseProperty.Text()), 64)
+					}
+				case 5:
+					failed.SelectionProperty = strings.TrimSpace(failedCourseProperty.Text())
+				case 6:
+					failed.Score, _ = strconv.ParseFloat(strings.TrimSpace(failedCourseProperty.Text()), 64)
+				case 7:
+					failed.ExamTime, _ = time.Parse("20060102", strings.TrimSpace(failedCourseProperty.Text()))
+				case 8:
+					failed.Reason = strings.TrimSpace(failedCourseProperty.Text())
+
+				} //switch
+			})
+
+			// 判断是否仍在挂
+			if dispIdx == 0 {
+				failed.StillFail = true
+			} else {
+				failed.StillFail = false
+			}
+
+			fcourses = append(fcourses, failed) // 加入到最终返回列表
+		})
+
+	})
+
+	return fcourses, nil
 }
