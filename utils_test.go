@@ -88,5 +88,17 @@ func Test_ByteTransfer(t *testing.T) {
 	}
 	fn(arr)
 	fmt.Println(arr)
+}
 
+func Test_WeekParse(t *testing.T) {
+	weeks := ParseCourseWeeks(" 1-10,12-13,14,16,18周上")
+	fmt.Println(weeks)
+}
+
+func Test_StringMinus(t *testing.T) {
+	s1 := '一'
+	s2 := '二'
+
+	fmt.Println(s2 - s1)
+	fmt.Println("一:", int(s1), " 二:", int(s2))
 }

@@ -260,11 +260,11 @@ func (urp *UrpCrawler) GetPassedCourses(client *http.Client, activateUrlIdx int)
 				switch tdidx {
 				case 0:
 					{
-						course.Id = strings.TrimSpace(field.Text())
+						course.CourseId = strings.TrimSpace(field.Text())
 					}
 				case 1:
 					{
-						course.CourseSequenceNumber, _ = strconv.Atoi(strings.TrimSpace(field.Text()))
+						course.CourseSequenceNumber = strings.TrimSpace(field.Text())
 					}
 				case 2:
 					{
@@ -387,4 +387,109 @@ func (urp *UrpCrawler) GetFailedCourses(client *http.Client, activateUrlIdx int)
 	})
 
 	return fcourses, nil
+}
+
+// GetCourseList 获取课程表页面并解析
+func (urp *UrpCrawler) GetCourseList(client *http.Client, activeUrlIdx int) (seletects []DataModel.SelectedCourse, err error) {
+	uid, _ := uuid.NewUUID()
+	uids := strings.Split(uid.String(), "-")[0]
+	err = fmt.Errorf("无法获取课程表信息,错误id: %s", uids)
+
+	resp, er := client.Get(urp.config.BaseLocationURP[activeUrlIdx] + "/xkAction.do?actionType=6")
+	if er != nil {
+		logger.Warn("请求课程表页面出错", zap.String("errid", uids), zap.Time("time", time.Now()), zap.String("detail", er.Error()))
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	// 解码GBK
+	pageHtmlBytes, er := ioutil.ReadAll(resp.Body)
+	if er != nil {
+		logger.Warn("课程表页面响应读取错误", zap.String("errid", uids), zap.Time("time", time.Now()), zap.String("detail", er.Error()))
+		return nil, err
+	}
+	pageDecodedBytes, _ := DecodeGBK(pageHtmlBytes)
+
+	var tmpCourse *DataModel.SelectedCourse
+	// 解析页面
+	doc, er := goquery.NewDocumentFromReader(bytes.NewReader(pageDecodedBytes))
+	doc.Find(".odd").Each(func(i int, coursesTR *goquery.Selection) {
+		if coursesTR.Find("td").Length() > 7 {
+			tmpCourse = new(DataModel.SelectedCourse)
+			var timeloc = DataModel.TimeLocation{} // 第一个上课时间地点安排
+
+			coursesTR.Find("td").Each(func(i int, courseProperty *goquery.Selection) {
+				switch i {
+				case 0:
+					tmpCourse.TrainingScheme = strings.TrimSpace(courseProperty.Text())
+				case 1:
+					tmpCourse.CourseId = strings.TrimSpace(courseProperty.Text())
+				case 2:
+					tmpCourse.CourseName = strings.TrimSpace(courseProperty.Text())
+				case 3:
+					tmpCourse.CourseSequenceNumber = strings.TrimSpace(courseProperty.Text())
+				case 4:
+					tmpCourse.CourseCredit, _ = strconv.ParseFloat(strings.TrimSpace(courseProperty.Text()), 64)
+				case 5:
+					tmpCourse.SelectionType = strings.TrimSpace(courseProperty.Text())
+				case 6:
+					tmpCourse.ExamType = strings.TrimSpace(courseProperty.Text())
+				case 7:
+					tmpCourse.TeacherName = strings.TrimSpace(courseProperty.Text())
+				case 9:
+					tmpCourse.WayOfStudy = strings.TrimSpace(courseProperty.Text())
+				case 10:
+					tmpCourse.SelectionStatus = strings.TrimSpace(courseProperty.Text())
+				case 11:
+					timeloc.Weeks = ParseCourseWeeks(strings.TrimSpace(courseProperty.Text()))
+				case 12:
+					timeloc.Day, _ = strconv.Atoi(strings.TrimSpace(courseProperty.Text()))
+				case 13:
+					timeloc.Start = ParseCourseStartTime(strings.TrimSpace(courseProperty.Text()))
+				case 14:
+					timeloc.Length, _ = strconv.Atoi(strings.TrimSpace(courseProperty.Text()))
+				case 15:
+					timeloc.Campus = strings.TrimSpace(courseProperty.Text())
+				case 16:
+					timeloc.Building = strings.TrimSpace(courseProperty.Text())
+				case 17:
+					timeloc.Room = strings.TrimSpace(courseProperty.Text())
+				}
+			})
+			tmpCourse.TimeLocs = append(tmpCourse.TimeLocs, timeloc) // 添加第一个上课时间地点
+
+		} else { // td < 7
+			fmt.Println("td counts less than 7")
+			// 上一个课程行的附加上课时间地点信息
+			otherTimeLoc := DataModel.TimeLocation{}
+			coursesTR.Find("td").Each(func(i int, courseProperty *goquery.Selection) {
+				switch i {
+				case 0:
+					otherTimeLoc.Weeks = ParseCourseWeeks(strings.TrimSpace(courseProperty.Text()))
+				case 1:
+					otherTimeLoc.Day, _ = strconv.Atoi(strings.TrimSpace(courseProperty.Text()))
+				case 2:
+					otherTimeLoc.Start = ParseCourseStartTime(strings.TrimSpace(courseProperty.Text()))
+				case 3:
+					otherTimeLoc.Length, _ = strconv.Atoi(strings.TrimSpace(courseProperty.Text()))
+				case 4:
+					otherTimeLoc.Campus = strings.TrimSpace(courseProperty.Text())
+				case 5:
+					otherTimeLoc.Building = strings.TrimSpace(courseProperty.Text())
+				case 6:
+					otherTimeLoc.Room = strings.TrimSpace(courseProperty.Text())
+				}
+			})
+			fmt.Println("timeloc: ", otherTimeLoc)
+			tmpCourse.TimeLocs = append(tmpCourse.TimeLocs, otherTimeLoc)
+		}
+
+		// 下一个tr包含课程名信息或已经是最后一个节点，则已经准备好一个Course
+		if coursesTR.Next().Find("td").Length() > 7 || coursesTR.Next().Size() < 1 {
+			seletects = append(seletects, *tmpCourse)
+		}
+
+	})
+
+	return seletects, nil
 }

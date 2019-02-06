@@ -3,9 +3,8 @@ package DataModel
 import "time"
 
 type PassedCourse struct {
-	Id                   string
 	CourseId             string
-	CourseSequenceNumber int
+	CourseSequenceNumber string
 	CourseName           string
 	EnglishCourseName    string
 	CourseCredit         float64
@@ -33,4 +32,9 @@ type Term struct {
 	TermYear        int
 	TermOrder       int // 0-春季学期, 1-秋季学期
 	PassedCourses   []PassedCourse
+}
+
+type Wrapper struct {
+	PassedCourse
+	Id string
 }

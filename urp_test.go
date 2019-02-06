@@ -2,6 +2,7 @@ package tyut_osc
 
 import (
 	"fmt"
+	"go.uber.org/zap"
 	"testing"
 	"time"
 )
@@ -44,4 +45,15 @@ func Test_FailedCourses(t *testing.T) {
 	} else {
 		fmt.Println(fcourse)
 	}
+}
+
+func Test_CourseList(t *testing.T) {
+	urp := NewUrpCrawler()
+	client, idx, _ := urp.CreateClientAndLogin("2016006359", "110628")
+	list, err := urp.GetCourseList(client, idx)
+	if err != nil {
+		logger.Warn("课程列表获取失败", zap.String("detail", err.Error()))
+		t.Fail()
+	}
+	fmt.Println(list)
 }
