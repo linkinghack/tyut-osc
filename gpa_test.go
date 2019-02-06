@@ -41,7 +41,7 @@ func Test_JsonParse(t *testing.T) {
 
 func TestGpaCrawler_GetGpaInfo(t *testing.T) {
 	gpacrawler := NewGpaCrawler()
-	text, err := gpacrawler.GetGpaRank("2015005973", "lolipop8974", "2015005973")
+	text, err := gpacrawler.GetGpaDetail("2015005973", "lolipop8974", "2015005973")
 	if err != nil {
 		t.Fail()
 		panic(err)

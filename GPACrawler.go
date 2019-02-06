@@ -16,8 +16,8 @@ import (
 )
 
 // GpaCrawler is the object representing the crawl engine
+//
 // Generally, just use the DefaultGpaCrawler is OK. The difference between different
-//GpaCrawlers is just the Configuration.
 type GpaCrawler struct {
 	config *Configuration
 }
@@ -27,16 +27,16 @@ func (e *GpaCrawler) SetConfiguration(conf *Configuration) {
 }
 
 // Create an instance of GpaCrawler.
-// @returns The pointer of the GpaCrawler{} just created.
+// Return a pointer of the GpaCrawler{} just created.
 func NewGpaCrawler() *GpaCrawler {
 	defer logger.Sync()
 	// 初始化gpa教务系统配置
 	defaultConfig := &Configuration{}
 	DefaultGpaCrawler := &GpaCrawler{}
 
-	configFile, err := ioutil.ReadFile("config.json")
+	configFile, err := ioutil.ReadFile("/tyuter/configs/CrawlerConfig.json")
 	if err != nil {
-		logger.Warn("无法加载GPACrawler配置文件: config.json")
+		logger.Warn("无法加载GPACrawler配置文件: /tyuter/configs/CrawlerConfig.json")
 		defaultConfig = loadDefaultConfiguration()
 		logger.Info("已使用默认配置创建GPACrawler")
 	} else {
@@ -46,7 +46,7 @@ func NewGpaCrawler() *GpaCrawler {
 		}
 		// 配置文件错误格式不正确
 		if defaultConfig.BaseLocationGPA == nil || defaultConfig.BaseLocationURP == nil {
-			logger.Error("config.json 中无法读取所需信息。请正确定义BaseLocationURP:[]string 和 BaseLocationGPA:[]string")
+			logger.Error("CrawlerConfig.json 中无法读取所需信息。请正确定义BaseLocationURP:[]string 和 BaseLocationGPA:[]string")
 			defaultConfig = loadDefaultConfiguration()
 			logger.Info("使用默认配置创建GPACrawler", zap.Time("time", time.Now()))
 		}
@@ -143,18 +143,21 @@ func (crawler *GpaCrawler) fetchGpaJson(stuid string, client *http.Client) (stri
 	return result, nil
 }
 
-func (crawler *GpaCrawler) GetGpaRank(stuid string, stuPassword string, targetStuid string) (*DataModel.GpaRank, error) {
+// GetGpaDetail 获取GPA教务系统的学生基本信息和排名信息
+func (crawler *GpaCrawler) GetGpaDetail(stuid string, stuPassword string, targetStuid string) (*DataModel.GpaDetail, error) {
 	uid, _ := uuid.NewUUID()
 	uids := strings.Split(uid.String(), "-")[0]
 	defer logger.Sync()
 
 	client, err := crawler.createClientAndLogin(stuid, stuPassword)
 	if err != nil {
-		return nil, err
+		logger.Info("请求GPA Json失败", zap.String("stuid", stuid), zap.String("errid", uids), zap.Time("time", time.Now()), zap.String("detail", err.Error()))
+		return nil, fmt.Errorf("请求教务管理系统失败,错误id:%s", uids)
 	}
 
 	jsonText, err := crawler.fetchGpaJson(targetStuid, client)
 	if err != nil {
+		logger.Warn("GPA JSON 解析错误", zap.String("stuid", stuid), zap.String("errid", uids), zap.Time("time", time.Now()))
 		return nil, err
 	}
 
@@ -165,6 +168,6 @@ func (crawler *GpaCrawler) GetGpaRank(stuid string, stuPassword string, targetSt
 		logger.Error("无法解析GPA JSON", zap.Time("time", time.Now()), zap.String("detail", err.Error()))
 		return nil, fmt.Errorf("未知错误,错误id:%s", uids)
 	}
-	gparank := DataModel.GpaRank(gpainfo)
-	return &gparank, nil
+	detail := DataModel.GpaDetail(gpainfo)
+	return &detail, nil
 }

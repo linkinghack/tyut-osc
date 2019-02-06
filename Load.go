@@ -27,13 +27,13 @@ var OcrPool *OcrEnginePool
 
 func init() {
 	// 日志配置初始化
-	logconfigRaw, err := ioutil.ReadFile("logConfig.json")
+	logconfigRaw, err := ioutil.ReadFile("/tyuter/configs/ZapConfig.json")
 	if err != nil {
-		log.Fatal("Cannot find logConfig.json")
+		log.Fatal("Cannot find ZapConfig.json")
 	}
 	var cfg zap.Config
 	if jsonerr := json.Unmarshal(logconfigRaw, &cfg); jsonerr != nil {
-		log.Fatal("logConfig.json is illeagle")
+		log.Fatal("ZapConfig.json is illeagle")
 	}
 	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 
@@ -58,8 +58,9 @@ func init() {
 func loadDefaultConfiguration() *Configuration {
 	logger.Info("Loading default configuration of GpaCrawler", zap.Time("time", time.Now()))
 	defaultConfig := &Configuration{
-		BaseLocationURP: []string{"http://202.207.247.49", "http://202.207.247.44:8089", "http://202.207.247.51:8065", "http://202.207.247.49"},
+		BaseLocationURP: []string{"http://202.207.247.44:8089", "http://202.207.247.44:8065", "http://202.207.247.44:8059", "http://202.207.247.44:8064", "http://202.207.247.51:8065", "http://202.207.247.49"},
 		BaseLocationGPA: []string{"http://202.207.247.60/"},
+		UrpLoginAttempt: 10,
 	}
 	return defaultConfig
 }
@@ -69,7 +70,7 @@ func loadConfigFromFile(fileName string) *Configuration {
 
 	configFile, err := ioutil.ReadFile(fileName)
 	if err != nil {
-		logger.Warn("无法加载GPACrawler配置文件: config.json")
+		logger.Warn("无法加载GPACrawler配置文件: CrawlerConfig.json")
 		defaultConfig = loadDefaultConfiguration()
 		logger.Info("已使用默认配置创建GPACrawler")
 	} else {
@@ -79,7 +80,7 @@ func loadConfigFromFile(fileName string) *Configuration {
 		}
 		// 配置文件错误格式不正确
 		if defaultConfig.BaseLocationGPA == nil || defaultConfig.BaseLocationURP == nil {
-			logger.Error("config.json 中无法读取所需信息。请正确定义BaseLocationURP:[]string 和 BaseLocationGPA:[]string")
+			logger.Error("CrawlerConfig.json 中无法读取所需信息。请正确定义BaseLocationURP:[]string 和 BaseLocationGPA:[]string")
 			defaultConfig = loadDefaultConfiguration()
 			logger.Info("使用默认配置创建GPACrawler", zap.Time("time", time.Now()))
 		}

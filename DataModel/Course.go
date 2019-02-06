@@ -19,7 +19,7 @@ type TimeLocation struct {
 	//WeekContinuous	bool // 是否连续星期  true: len(Weeks) = 2 代表开始和结束周; false: Weeks中保存上课的周数,长度不定
 	Day      int    // Day of week
 	Start    int    // 起始节次
-	Length   int    // 客场节数
+	Length   int    // 课程节数
 	Campus   string // 校区
 	Building string // 教学楼
 	Room     string // 教室号

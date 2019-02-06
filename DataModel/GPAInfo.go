@@ -43,9 +43,9 @@ type GpaInfo struct {
 [{"xh":"2015005973","xm":"刘磊","bjh":"软件1516","bm":"软件1516","zyh":"160101","zym":"软件工程","xsh":"16","xsm":"软件学院","njdm":"2015","yqzxf":"188","yxzzsjxf":"8.32","zxf":"159.50","yxzxf":"159.50","cbjgxf":"0","sbjgxf":"0","pjxfjd":"3.80","gpabjpm":"4","gpazypm":"61","pjcj":"85.30","pjcjbjpm":"3","pjcjzypm":"69","jqxfcj":"84.93","jqbjpm":"4","jqzypm":"65","tsjqxfcj":"84.93","tjsj":"2019-01-17 01:00:04","bjrs":"30","zyrs":"968","dlrs":"","gpadlpm":"1148"}]
 */
 
-// GpaRank 与GpaInfo表达的信息一样,用于输出,其json tag已消除
+// GpaDetail 与GpaInfo表达的信息一样,用于输出,其json tag已消除
 // 在应用中可以直接由GpaInfo强制类型转换
-type GpaRank struct {
+type GpaDetail struct {
 	StudentId     string //xh 学号
 	Name          string //xm 姓名
 	ClassId       string //bjh 班级号

@@ -28,9 +28,10 @@ func (u *UrpCrawler) SetConfiguration(conf *Configuration) {
 	u.config = conf
 }
 
+// NewUrpCraler 加载配置文件并创建一个UrpCrawler实例，返回指针
 func NewUrpCrawler() *UrpCrawler {
 	uc := UrpCrawler{
-		config: loadConfigFromFile("config.json"),
+		config: loadConfigFromFile("/tyuter/configs/CrawlerConfig.json"),
 	}
 
 	return &uc
@@ -40,6 +41,7 @@ func (urp *UrpCrawler) CreateClientAndLogin(stuid string, stuPassword string) (c
 	uid, _ := uuid.NewUUID()
 	uids := strings.Split(uid.String(), "-")[0]
 	err = fmt.Errorf("登录过程异常,错误id: %s", uids)
+	defer logger.Sync()
 
 	// 准备http.Client
 
@@ -110,7 +112,8 @@ func (urp *UrpCrawler) login(stuid string, stuPassword string, captcha string, c
 	uid, _ := uuid.NewUUID()
 	uids := strings.Split(uid.String(), "-")[0]
 	err = fmt.Errorf("登录过程异常,错误id: %s", uids)
-	ok = false
+	ok = false // 登录结果,返回值
+	defer logger.Sync()
 
 	// 5. 登录
 	loginformvalues := url.Values{}
@@ -159,6 +162,7 @@ func (urp *UrpCrawler) getCaptcha(stuid string, stuPassword string, client *http
 	uid, _ := uuid.NewUUID()
 	uids := strings.Split(uid.String(), "-")[0]
 	err = fmt.Errorf("无法登录教务系统,错误id: %s", uids)
+	defer logger.Sync()
 
 	captcha = ""
 	ocr := OcrPool.Get()
@@ -204,6 +208,7 @@ func (urp *UrpCrawler) GetPassedCourses(client *http.Client, activateUrlIdx int)
 	uid, _ := uuid.NewUUID()
 	uids := strings.Split(uid.String(), "-")[0]
 	err = fmt.Errorf("无法获取已通过成绩,错误id: %s", uids)
+	defer logger.Sync()
 
 	resp, er := client.Get(urp.config.BaseLocationURP[activateUrlIdx] + "/gradeLnAllAction.do?type=ln&oper=qbinfo&lnxndm=")
 	if er != nil {
@@ -316,6 +321,7 @@ func (urp *UrpCrawler) GetFailedCourses(client *http.Client, activateUrlIdx int)
 	uid, _ := uuid.NewUUID()
 	uids := strings.Split(uid.String(), "-")[0]
 	err = fmt.Errorf("无法获取不及格科目,错误id: %s", uids)
+	defer logger.Sync()
 
 	resp, er := client.Get(urp.config.BaseLocationURP[activateUrlIdx] + "/gradeLnAllAction.do?type=ln&oper=bjg")
 	if er != nil {
@@ -394,6 +400,7 @@ func (urp *UrpCrawler) GetCourseList(client *http.Client, activeUrlIdx int) (sel
 	uid, _ := uuid.NewUUID()
 	uids := strings.Split(uid.String(), "-")[0]
 	err = fmt.Errorf("无法获取课程表信息,错误id: %s", uids)
+	defer logger.Sync()
 
 	resp, er := client.Get(urp.config.BaseLocationURP[activeUrlIdx] + "/xkAction.do?actionType=6")
 	if er != nil {
