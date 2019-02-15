@@ -34,7 +34,7 @@ func NewGpaCrawler() *GpaCrawler {
 	defaultConfig := &Configuration{}
 	DefaultGpaCrawler := &GpaCrawler{}
 
-	configFile, err := ioutil.ReadFile("/tyuter/configs/CrawlerConfig.json")
+	configFile, err := ioutil.ReadFile("/tyuter/configs/tyut-osc-CrawlerConfig.json")
 	if err != nil {
 		logger.Warn("无法加载GPACrawler配置文件: /tyuter/configs/CrawlerConfig.json")
 		defaultConfig = loadDefaultConfiguration()

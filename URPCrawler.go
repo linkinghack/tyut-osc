@@ -31,7 +31,7 @@ func (u *UrpCrawler) SetConfiguration(conf *Configuration) {
 // NewUrpCraler 加载配置文件并创建一个UrpCrawler实例，返回指针
 func NewUrpCrawler() *UrpCrawler {
 	uc := UrpCrawler{
-		config: loadConfigFromFile("/tyuter/configs/CrawlerConfig.json"),
+		config: loadConfigFromFile("/tyuter/configs/tyut-osc-CrawlerConfig.json"),
 	}
 
 	return &uc
@@ -309,9 +309,9 @@ func (urp *UrpCrawler) GetPassedCourses(client *http.Client, activateUrlIdx int)
 		terms[i].PassedCourses = passedcourses
 	})
 
-	fmt.Println(terms)
+	//fmt.Println(terms)
 
-	return
+	return terms, nil
 }
 
 /**

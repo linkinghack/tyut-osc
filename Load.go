@@ -27,13 +27,13 @@ var OcrPool *OcrEnginePool
 
 func init() {
 	// 日志配置初始化
-	logconfigRaw, err := ioutil.ReadFile("/tyuter/configs/ZapConfig.json")
+	logconfigRaw, err := ioutil.ReadFile("/tyuter/configs/tyut-osc-ZapConfig.json")
 	if err != nil {
 		log.Fatal("Cannot find ZapConfig.json")
 	}
 	var cfg zap.Config
 	if jsonerr := json.Unmarshal(logconfigRaw, &cfg); jsonerr != nil {
-		log.Fatal("ZapConfig.json is illeagle")
+		log.Fatal("ZapConfig.json is illegal")
 	}
 	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 

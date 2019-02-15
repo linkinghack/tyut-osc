@@ -4,6 +4,7 @@
   "outputPaths": ["stdout"],
   "errorOutputPaths": ["stderr"],
   "disableCaller": false,
+  "initialFields": {"Component": "tyut-osc"},
   "encoderConfig": {
     "messageKey": "message",
     "levelKey": "level",
