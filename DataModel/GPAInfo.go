@@ -16,7 +16,7 @@ type GpaInfo struct {
 	NumOfMajorStu int    `json:"zyrs,string"` //zyrs 专业人数
 
 	RequiredCredit   float64 `json:"yqzxf,string"`    //yqzxf 要求总学分
-	ActivityCredit   float64 `json："yxzzsjxf,string"` //yxzzsjxf 已修自主实践学分
+	ActivityCredit   float64 `json:"yxzzsjxf,string"` //yxzzsjxf 已修自主实践学分
 	TotalCredit      float64 `json:"zxf,string"`      //zxf 总学分
 	GottedCredit     float64 `json:"yxzxf,string"`    //yxzxf 已修总学分
 	OnceFailedCredit float64 `json:"cbjgxf,string"`   //cbjgxf 曾不及格学分
