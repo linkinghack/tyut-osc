@@ -87,7 +87,7 @@ func (crawler *GpaCrawler) createClientAndLogin(stuid string, stuPassword string
 		formValues)
 	if er != nil { // 一般不会发生，超时错误已在初始化cookie 阶段处理
 		logger.Info("GPA教务系统登录失败", zap.String("stuid", stuid), zap.String("errid", uids), zap.Time("time", time.Now()))
-		fmt.Errorf("GPA教务系统登录失败,错误id: %s", uids)
+		err = fmt.Errorf("GPA教务系统登录失败,错误id: %s", uids)
 		return
 	}
 	defer resp.Body.Close()
@@ -107,7 +107,7 @@ func (crawler *GpaCrawler) createClientAndLogin(stuid string, stuPassword string
 		}
 
 	} else {
-		logger.Info("GPA 系统登陆成功", zap.String("stuid", stuid), zap.Time("time", time.Now()))
+		logger.Info("GPA 系统登录成功", zap.String("stuid", stuid), zap.Time("time", time.Now()))
 		err = nil
 	}
 	return
@@ -152,7 +152,7 @@ func (crawler *GpaCrawler) GetGpaDetail(stuid string, stuPassword string, target
 	client, err := crawler.createClientAndLogin(stuid, stuPassword)
 	if err != nil {
 		logger.Info("请求GPA Json失败", zap.String("stuid", stuid), zap.String("errid", uids), zap.Time("time", time.Now()), zap.String("detail", err.Error()))
-		return nil, fmt.Errorf("请求教务管理系统失败,错误id:%s", uids)
+		return nil, err
 	}
 
 	jsonText, err := crawler.fetchGpaJson(targetStuid, client)
