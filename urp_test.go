@@ -32,7 +32,8 @@ func Test_UrpLogin(t *testing.T) {
 func Test_PassedCourses(t *testing.T) {
 	urp := NewUrpCrawler()
 	client, idx, _ := urp.CreateClientAndLogin("2015005973", "lolipop8974.")
-	urp.GetPassedCourses(client, idx)
+	courses, _ := urp.GetPassedCourses(client, idx)
+	fmt.Println(courses)
 }
 
 func Test_FailedCourses(t *testing.T) {
