@@ -48,7 +48,7 @@ func (urp *UrpCrawler) CreateClientAndLogin(stuid string, stuPassword string) (c
 	jar, _ := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
 	client = &http.Client{
 		Jar:     jar,
-		Timeout: time.Second * 2,
+		Timeout: time.Second * 4,
 	}
 
 	// 1. 探测可用的url并初始化cookie
@@ -224,7 +224,7 @@ func (urp *UrpCrawler) GetPassedCourses(client *http.Client, activateUrlIdx int)
 		return nil, err
 	}
 
-	//ioutil.WriteFile("grade.html",passedCoursesHtmlBytes,0644)
+	ioutil.WriteFile("grade.html", passedCoursesHtmlBytes, 0644)
 
 	// 分析html结构
 	doc, er := goquery.NewDocumentFromReader(bytes.NewReader(passedCoursesHtmlBytes))
