@@ -157,16 +157,17 @@ func (crawler *GpaCrawler) GetGpaDetail(stuid string, stuPassword string, target
 
 	jsonText, err := crawler.fetchGpaJson(targetStuid, client)
 	if err != nil {
-		logger.Warn("GPA JSON 解析错误", zap.String("stuid", stuid), zap.String("errid", uids), zap.Time("time", time.Now()))
+		logger.Warn("GPA JSON 解析错误", zap.String("stuid", stuid), zap.String("errid", uids), zap.Time("time", time.Now()), zap.String("detail", err.Error()))
 		return nil, err
 	}
 
 	// 解析Json
 	gpainfo := DataModel.GpaInfo{}
+
 	err = json.Unmarshal([]byte(jsonText), &gpainfo)
+
 	if err != nil {
 		logger.Error("无法解析GPA JSON", zap.Time("time", time.Now()), zap.String("detail", err.Error()))
-		return nil, fmt.Errorf("未知错误,错误id:%s", uids)
 	}
 	detail := DataModel.GpaDetail(gpainfo)
 	return &detail, nil

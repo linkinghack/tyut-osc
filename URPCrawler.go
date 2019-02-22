@@ -331,6 +331,7 @@ func (urp *UrpCrawler) GetFailedCourses(client *http.Client, activateUrlIdx int)
 	defer resp.Body.Close()
 
 	failedCourseHtmlBytes, er := ioutil.ReadAll(resp.Body)
+
 	if er != nil {
 		logger.Warn("不及格成绩页面响应读取错误", zap.String("errid", uids), zap.Time("time", time.Now()), zap.String("detail", er.Error()))
 		return nil, err
@@ -340,8 +341,6 @@ func (urp *UrpCrawler) GetFailedCourses(client *http.Client, activateUrlIdx int)
 		logger.Warn("GBK解码错误", zap.String("errid", uids), zap.Time("time", time.Now()), zap.String("detail", er.Error()))
 		return nil, err
 	}
-
-	//ioutil.WriteFile("failedCourses.html",failedCourseHtmlBytes,0644)
 
 	// goquery解析页面
 	doc, er := goquery.NewDocumentFromReader(bytes.NewReader(failedCourseHtmlBytes))
@@ -391,7 +390,6 @@ func (urp *UrpCrawler) GetFailedCourses(client *http.Client, activateUrlIdx int)
 		})
 
 	})
-
 	return fcourses, nil
 }
 
