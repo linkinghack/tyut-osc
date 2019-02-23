@@ -70,13 +70,14 @@ func (crawler *GpaCrawler) createClientAndLogin(stuid string, stuPassword string
 	}
 
 	// 初始化Cookie
-	_, er := client.Get(crawler.config.BaseLocationGPA[0])
+	res, er := client.Get(crawler.config.BaseLocationGPA[0])
 	if er != nil {
 		logger.Error("无法连接GPA系统主机 可能超时错误", zap.String("errid", uids), zap.String("stuid", stuid), zap.Time("time", time.Now()), zap.String("detail", er.Error()))
 		err = fmt.Errorf("连接到GPA教务系统超时,错误id: %s", uids)
 		client = nil
 		return
 	}
+	res.Body.Close()
 
 	// 登录验证
 	formValues := url.Values{}
@@ -170,5 +171,6 @@ func (crawler *GpaCrawler) GetGpaDetail(stuid string, stuPassword string, target
 		logger.Error("无法解析GPA JSON", zap.Time("time", time.Now()), zap.String("detail", err.Error()))
 	}
 	detail := DataModel.GpaDetail(gpainfo)
+	client = nil // GC
 	return &detail, nil
 }

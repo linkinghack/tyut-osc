@@ -55,12 +55,13 @@ func (urp *UrpCrawler) CreateClientAndLogin(stuid string, stuPassword string) (c
 	foundActive := false
 
 	for i, v := range urp.config.BaseLocationURP {
-		_, er := client.Get(v)
+		res, er := client.Get(v)
 		if er == nil {
 			foundActive = true
 			activateUrlIdx = i
 			break
 		}
+		defer res.Body.Close()
 		fmt.Println(er.Error())
 	}
 	// 没有可以连通的urp系统url
