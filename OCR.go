@@ -13,8 +13,8 @@ import (
 )
 
 type OcrEnginePool struct {
-	active *atomic.Int32
-	size   *atomic.Int32
+	active *atomic.Int32 // 资源池内部现存的资源数量
+	size   *atomic.Int32 // 资源池最大存储量
 	p      sync.Pool
 }
 
@@ -24,18 +24,11 @@ func (p *OcrEnginePool) SetSize(size int32) {
 
 func (p *OcrEnginePool) Get() *gosseract.Client {
 	client := p.p.Get().(*gosseract.Client)
-	p.active.Add(1)
 	return client
 }
 
 func (p *OcrEnginePool) Put(c *gosseract.Client) {
-	if p.active.Load() > p.size.Load() {
-		c.Close()
-		c = nil //GC
-	} else {
-		p.active.Add(-1)
-		p.p.Put(c)
-	}
+	p.p.Put(c)
 }
 
 func NewOcrEnginePool(size int32, initialActive int32) *OcrEnginePool {
@@ -58,11 +51,11 @@ func NewOcrEnginePool(size int32, initialActive int32) *OcrEnginePool {
 	}
 
 	// Create initial engines
-	if initialActive > 0 {
+	/*	if initialActive > 0 {
 		for i := 0; i < int(initialActive); i++ {
 			ocrpool.Put(gosseract.NewClient())
 		}
-	}
+	}*/
 
 	return &ocrpool
 }

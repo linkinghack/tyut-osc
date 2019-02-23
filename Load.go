@@ -49,10 +49,9 @@ func init() {
 
 // 初始化Ocr pool
 func init() {
-	OcrPool = NewOcrEnginePool(20, 5)
+	OcrPool = NewOcrEnginePool(10, 5)
 	engine := OcrPool.Get()
 	defer OcrPool.Put(engine)
-
 }
 
 func loadDefaultConfiguration() *Configuration {

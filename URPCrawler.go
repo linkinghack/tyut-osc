@@ -33,7 +33,6 @@ func NewUrpCrawler() *UrpCrawler {
 	uc := UrpCrawler{
 		config: loadConfigFromFile("/tyuter/configs/tyut-osc-CrawlerConfig.json"),
 	}
-
 	return &uc
 }
 
@@ -224,7 +223,7 @@ func (urp *UrpCrawler) GetPassedCourses(client *http.Client, activateUrlIdx int)
 		return nil, err
 	}
 
-	ioutil.WriteFile("grade.html", passedCoursesHtmlBytes, 0644)
+	//ioutil.WriteFile("grade.html", passedCoursesHtmlBytes, 0644)
 
 	// 分析html结构
 	doc, er := goquery.NewDocumentFromReader(bytes.NewReader(passedCoursesHtmlBytes))
