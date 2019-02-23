@@ -166,7 +166,7 @@ func (urp *UrpCrawler) getCaptcha(stuid string, stuPassword string, client *http
 
 	captcha = ""
 	ocr := OcrPool.Get()
-	defer OcrPool.Put(ocr)
+	defer ocr.Close()
 
 	for len(captcha) != 4 {
 		// 2. 请求验证码
